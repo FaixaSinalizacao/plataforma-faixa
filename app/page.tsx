@@ -3,6 +3,17 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+import {
+  Building2,
+  ClipboardList,
+  Truck,
+  FileText,
+  Users,
+  Plane,
+  BarChart3,
+  DollarSign,
+} from 'lucide-react'
+
 type Obra = {
   id: string
   nome: string
@@ -12,8 +23,6 @@ type Obra = {
 
 export default function Home() {
   const [obras, setObras] = useState<Obra[]>([])
-  const [nome, setNome] = useState('')
-  const [cliente, setCliente] = useState('')
 
   async function carregarObras() {
     const { data } = await supabase
@@ -26,95 +35,178 @@ export default function Home() {
     }
   }
 
-  async function criarObra() {
-    if (!nome) return
-
-    await supabase.from('obras').insert([
-      {
-        nome,
-        cliente,
-        status: 'Em andamento',
-      },
-    ])
-
-    setNome('')
-    setCliente('')
-
-    carregarObras()
-  }
-
   useEffect(() => {
     carregarObras()
   }, [])
 
   return (
-    <div className="min-h-screen bg-slate-100 p-10">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl font-bold text-blue-700 mb-2">
-          Plataforma Faixa
-        </h1>
+    <div className="flex min-h-screen bg-slate-100">
+      {/* SIDEBAR */}
 
-        <p className="text-slate-600 mb-8">
-          Sistema Operacional + Gestão
-        </p>
+      <aside className="w-72 bg-slate-900 text-white p-6">
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-blue-400">
+            Plataforma Faixa
+          </h1>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm mb-8">
-          <h2 className="text-2xl font-semibold mb-4">
-            Nova Obra
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input
-              className="border rounded-2xl p-3"
-              placeholder="Nome da obra"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-            />
-
-            <input
-              className="border rounded-2xl p-3"
-              placeholder="Cliente"
-              value={cliente}
-              onChange={(e) => setCliente(e.target.value)}
-            />
-
-            <button
-              onClick={criarObra}
-              className="bg-blue-700 hover:bg-blue-800 text-white rounded-2xl p-3 font-semibold"
-            >
-              Salvar obra
-            </button>
-          </div>
+          <p className="text-slate-400 mt-2 text-sm">
+            Sistema Operacional + Gestão
+          </p>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm">
-          <h2 className="text-2xl font-semibold mb-6">
-            Obras cadastradas
+        <nav className="space-y-3">
+          <MenuItem
+            icon={<Building2 size={20} />}
+            title="Obras"
+          />
+
+          <MenuItem
+            icon={<ClipboardList size={20} />}
+            title="Medições"
+          />
+
+          <MenuItem
+            icon={<Truck size={20} />}
+            title="Equipamentos"
+          />
+
+          <MenuItem
+            icon={<FileText size={20} />}
+            title="Licitações"
+          />
+
+          <MenuItem
+            icon={<Users size={20} />}
+            title="RH"
+          />
+
+          <MenuItem
+            icon={<Plane size={20} />}
+            title="Viagens"
+          />
+
+          <MenuItem
+            icon={<BarChart3 size={20} />}
+            title="Dashboard"
+          />
+        </nav>
+      </aside>
+
+      {/* CONTEÚDO */}
+
+      <main className="flex-1 p-10">
+        <div className="mb-10">
+          <h2 className="text-4xl font-bold text-slate-800">
+            Dashboard Executivo
           </h2>
+
+          <p className="text-slate-500 mt-2">
+            Visão geral operacional da Plataforma Faixa
+          </p>
+        </div>
+
+        {/* KPIs */}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+          <CardKPI
+            title="Obras Ativas"
+            value={obras.length}
+            icon={<Building2 />}
+          />
+
+          <CardKPI
+            title="Medições"
+            value="12"
+            icon={<ClipboardList />}
+          />
+
+          <CardKPI
+            title="Equipamentos"
+            value="38"
+            icon={<Truck />}
+          />
+
+          <CardKPI
+            title="Faturamento"
+            value="R$ 2.4M"
+            icon={<DollarSign />}
+          />
+        </div>
+
+        {/* OBRAS */}
+
+        <div className="bg-white rounded-3xl p-8 shadow-sm">
+          <h3 className="text-2xl font-bold text-slate-800 mb-6">
+            Obras Recentes
+          </h3>
 
           <div className="space-y-4">
             {obras.map((obra) => (
               <div
                 key={obra.id}
-                className="border rounded-2xl p-4 flex justify-between items-center"
+                className="border border-slate-200 rounded-2xl p-5 flex items-center justify-between"
               >
                 <div>
-                  <h3 className="font-bold text-lg">
+                  <h4 className="font-bold text-lg text-slate-800">
                     {obra.nome}
-                  </h3>
+                  </h4>
 
                   <p className="text-slate-500">
                     {obra.cliente}
                   </p>
                 </div>
 
-                <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm">
+                <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold">
                   {obra.status}
                 </span>
               </div>
             ))}
           </div>
         </div>
+      </main>
+    </div>
+  )
+}
+
+function MenuItem({
+  icon,
+  title,
+}: {
+  icon: React.ReactNode
+  title: string
+}) {
+  return (
+    <button className="w-full flex items-center gap-3 p-4 rounded-2xl hover:bg-slate-800 transition">
+      {icon}
+
+      <span className="font-medium">{title}</span>
+    </button>
+  )
+}
+
+function CardKPI({
+  title,
+  value,
+  icon,
+}: {
+  title: string
+  value: string | number
+  icon: React.ReactNode
+}) {
+  return (
+    <div className="bg-white rounded-3xl p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-slate-500">
+          {title}
+        </div>
+
+        <div className="text-blue-600">
+          {icon}
+        </div>
+      </div>
+
+      <div className="text-4xl font-bold text-slate-800">
+        {value}
       </div>
     </div>
   )
