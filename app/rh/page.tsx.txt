@@ -1,9 +1,13 @@
 export default function RHPage() {
   return (
-    <div>
-      <h1 className="text-4xl font-bold">
+    <div className="min-h-screen bg-slate-100 p-10">
+      <h1 className="text-4xl font-bold text-slate-800">
         Recursos Humanos
       </h1>
+
+      <p className="mt-2 text-slate-500">
+        Equipe, férias, folgas, documentação, EPIs, treinamentos e ASO/NR.
+      </p>
     </div>
   )
 }
