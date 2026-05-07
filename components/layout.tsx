@@ -1,6 +1,5 @@
 import './globals.css'
-
-import Sidebar from '../components/Sidebar'
+import AuthGuard from '@/components/AuthGuard'
 
 export const metadata = {
   title: 'Plataforma Faixa',
@@ -15,13 +14,9 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <body>
-        <div className="flex">
-          <Sidebar />
-
-          <main className="flex-1 bg-slate-100 min-h-screen p-10">
-            {children}
-          </main>
-        </div>
+        <AuthGuard>
+          {children}
+        </AuthGuard>
       </body>
     </html>
   )
