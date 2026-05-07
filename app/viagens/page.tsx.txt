@@ -1,0 +1,9 @@
+export default function ViagensPage() {
+  return (
+    <div>
+      <h1 className="text-4xl font-bold">
+        Gestão de Viagens
+      </h1>
+    </div>
+  )
+}
