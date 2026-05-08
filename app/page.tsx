@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
 import {
   Building2,
   ClipboardList,
   Truck,
   FileText,
 } from 'lucide-react'
-
 import { supabase } from '@/lib/supabase'
 
 const estadosBrasil = [
@@ -31,6 +29,7 @@ export default function DashboardPage() {
   const [numeroObra, setNumeroObra] = useState('')
   const [nome, setNome] = useState('')
   const [estadosSelecionados, setEstadosSelecionados] = useState<string[]>([])
+  const [estadoAberto, setEstadoAberto] = useState(false)
   const [cidade, setCidade] = useState('')
   const [orgao, setOrgao] = useState('')
   const [tipo, setTipo] = useState('Sinalização')
@@ -78,6 +77,7 @@ export default function DashboardPage() {
     setNumeroObra('')
     setNome('')
     setEstadosSelecionados([])
+    setEstadoAberto(false)
     setCidade('')
     setOrgao('')
     setTipo('Sinalização')
@@ -131,30 +131,50 @@ export default function DashboardPage() {
             className="p-4 rounded-2xl border border-slate-300"
           />
 
-          <div className="rounded-2xl border border-slate-300 p-4">
-            <p className="text-sm font-semibold text-slate-700 mb-3">
-              Estado(s)
-            </p>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setEstadoAberto(!estadoAberto)}
+              className="w-full p-4 rounded-2xl border border-slate-300 bg-white text-left flex justify-between items-center"
+            >
+              <span className={estadosSelecionados.length ? 'text-slate-800' : 'text-slate-400'}>
+                {estadosSelecionados.length
+                  ? estadosSelecionados.join(', ')
+                  : 'Selecionar estado(s)'}
+              </span>
 
-            <div className="grid grid-cols-4 gap-2 max-h-36 overflow-y-auto">
-              {estadosBrasil.map((estado) => (
-                <label
-                  key={estado}
-                  className="flex items-center gap-2 text-sm text-slate-700"
+              <span className="text-slate-500">
+                {estadoAberto ? '▲' : '▼'}
+              </span>
+            </button>
+
+            {estadoAberto && (
+              <div className="absolute z-20 mt-2 w-full bg-white border border-slate-300 rounded-2xl shadow-lg p-4">
+                <div className="grid grid-cols-4 gap-3 max-h-56 overflow-y-auto">
+                  {estadosBrasil.map((estado) => (
+                    <label
+                      key={estado}
+                      className="flex items-center gap-2 text-sm text-slate-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={estadosSelecionados.includes(estado)}
+                        onChange={() => alternarEstado(estado)}
+                      />
+                      {estado}
+                    </label>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setEstadoAberto(false)}
+                  className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-2 font-semibold"
                 >
-                  <input
-                    type="checkbox"
-                    checked={estadosSelecionados.includes(estado)}
-                    onChange={() => alternarEstado(estado)}
-                  />
-                  {estado}
-                </label>
-              ))}
-            </div>
-
-            <p className="text-xs text-slate-500 mt-3">
-              Selecionado: {estadosSelecionados.join(', ') || 'nenhum'}
-            </p>
+                  Confirmar estados
+                </button>
+              </div>
+            )}
           </div>
 
           <input
