@@ -1,320 +1,295 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Building2,
   ClipboardList,
   Truck,
   FileText,
+  Users,
+  Plane,
+  BarChart3,
+  DollarSign,
+  ChevronDown,
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 
 const estadosBrasil = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
-  'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI',
-  'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
+  'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
+  'RS','RO','RR','SC','SP','SE','TO'
 ]
 
-const cards = [
-  { title: 'Obras Ativas', value: '12', icon: Building2, color: 'bg-blue-500' },
-  { title: 'Medições', value: '28', icon: ClipboardList, color: 'bg-green-500' },
-  { title: 'Equipamentos', value: '47', icon: Truck, color: 'bg-orange-500' },
-  { title: 'Licitações', value: '9', icon: FileText, color: 'bg-purple-500' },
-]
+type Obra = {
+  contrato: string
+  numero: string
+  nome: string
+  estados: string[]
+  cidade: string
+  orgao: string
+  tipo: string
+  valor: string
+  inicio: string
+  fim: string
+}
 
 export default function DashboardPage() {
-  const [obras, setObras] = useState<any[]>([])
+  const [dropdownAberto, setDropdownAberto] = useState(false)
 
-  const [contrato, setContrato] = useState('')
-  const [numeroObra, setNumeroObra] = useState('')
-  const [nome, setNome] = useState('')
-  const [estadosSelecionados, setEstadosSelecionados] = useState<string[]>([])
-  const [estadoAberto, setEstadoAberto] = useState(false)
-  const [cidade, setCidade] = useState('')
-  const [orgao, setOrgao] = useState('')
-  const [tipo, setTipo] = useState('Sinalização')
-  const [valor, setValor] = useState('')
-  const [dataInicio, setDataInicio] = useState('')
-  const [dataFim, setDataFim] = useState('')
+  const [obra, setObra] = useState<Obra>({
+    contrato: '',
+    numero: '',
+    nome: '',
+    estados: [],
+    cidade: '',
+    orgao: '',
+    tipo: 'Sinalização',
+    valor: '',
+    inicio: '',
+    fim: '',
+  })
 
-  async function carregarObras() {
-    const { data } = await supabase
-      .from('obras')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (data) setObras(data)
-  }
-
-  function alternarEstado(estado: string) {
-    if (estadosSelecionados.includes(estado)) {
-      setEstadosSelecionados(
-        estadosSelecionados.filter((item) => item !== estado)
-      )
-    } else {
-      setEstadosSelecionados([...estadosSelecionados, estado])
-    }
-  }
-
-  async function criarObra() {
-    await supabase.from('obras').insert([
-      {
-        contrato,
-        numero_obra: numeroObra,
-        nome,
-        estado: estadosSelecionados.join(', '),
-        cidade,
-        orgao,
-        tipo,
-        valor,
-        data_inicio: dataInicio,
-        data_fim: dataFim,
-        status: 'Em andamento',
-      },
-    ])
-
-    setContrato('')
-    setNumeroObra('')
-    setNome('')
-    setEstadosSelecionados([])
-    setEstadoAberto(false)
-    setCidade('')
-    setOrgao('')
-    setTipo('Sinalização')
-    setValor('')
-    setDataInicio('')
-    setDataFim('')
-
-    carregarObras()
-  }
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    carregarObras()
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setDropdownAberto(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
   }, [])
 
-  return (
-    <div className="min-h-screen bg-slate-100 p-10">
-      <div className="mb-10">
-        <h2 className="text-4xl font-bold text-slate-800">
-          Dashboard Executivo
-        </h2>
+  function toggleEstado(estado: string) {
+    setObra((prev) => ({
+      ...prev,
+      estados: prev.estados.includes(estado)
+        ? prev.estados.filter((e) => e !== estado)
+        : [...prev.estados, estado],
+    }))
+  }
 
-        <p className="text-slate-500 mt-2">
+  function formatarMoeda(valor: string) {
+    const numero = valor.replace(/\D/g, '')
+
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(Number(numero) / 100)
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-5xl font-bold text-slate-800">
+          Dashboard Executivo
+        </h1>
+
+        <p className="text-slate-500 mt-3 text-lg">
           Gestão operacional da Plataforma Faixa
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 mb-10">
-        <h3 className="text-2xl font-bold text-slate-800 mb-6">
+      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
+        <h2 className="text-4xl font-bold mb-8 text-slate-800">
           Cadastro de Obra
-        </h3>
+        </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-6">
           <input
             placeholder="Contrato"
-            value={contrato}
-            onChange={(e) => setContrato(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.contrato}
+            onChange={(e) =>
+              setObra({ ...obra, contrato: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
 
           <input
             placeholder="Número da obra"
-            value={numeroObra}
-            onChange={(e) => setNumeroObra(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.numero}
+            onChange={(e) =>
+              setObra({ ...obra, numero: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
 
           <input
             placeholder="Nome da obra"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.nome}
+            onChange={(e) =>
+              setObra({ ...obra, nome: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
 
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               type="button"
-              onClick={() => setEstadoAberto(!estadoAberto)}
-              className="w-full p-4 rounded-2xl border border-slate-300 bg-white text-left flex justify-between items-center"
+              onClick={() => setDropdownAberto(!dropdownAberto)}
+              className="w-full p-5 rounded-2xl border border-slate-300 bg-white text-left flex items-center justify-between text-lg"
             >
-              <span className={estadosSelecionados.length ? 'text-slate-800' : 'text-slate-400'}>
-                {estadosSelecionados.length
-                  ? estadosSelecionados.join(', ')
-                  : 'Selecionar estado(s)'}
+              <span>
+                {obra.estados.length > 0
+                  ? obra.estados.join(', ')
+                  : 'Selecionar estados'}
               </span>
 
-              <span className="text-slate-500">
-                {estadoAberto ? '▲' : '▼'}
-              </span>
+              <ChevronDown size={22} />
             </button>
 
-            {estadoAberto && (
-              <div className="absolute z-20 mt-2 w-full bg-white border border-slate-300 rounded-2xl shadow-lg p-4">
-                <div className="grid grid-cols-4 gap-3 max-h-56 overflow-y-auto">
+            {dropdownAberto && (
+              <div className="absolute z-50 mt-2 w-full bg-white border border-slate-300 rounded-2xl shadow-xl p-4 max-h-72 overflow-y-auto">
+                <div className="grid grid-cols-4 gap-3">
                   {estadosBrasil.map((estado) => (
                     <label
                       key={estado}
-                      className="flex items-center gap-2 text-sm text-slate-700"
+                      className="flex items-center gap-2 text-lg"
                     >
                       <input
                         type="checkbox"
-                        checked={estadosSelecionados.includes(estado)}
-                        onChange={() => alternarEstado(estado)}
+                        checked={obra.estados.includes(estado)}
+                        onChange={() => toggleEstado(estado)}
                       />
+
                       {estado}
                     </label>
                   ))}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setEstadoAberto(false)}
-                  className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-2 font-semibold"
-                >
-                  Confirmar estados
-                </button>
               </div>
             )}
           </div>
 
           <input
             placeholder="Cidade"
-            value={cidade}
-            onChange={(e) => setCidade(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.cidade}
+            onChange={(e) =>
+              setObra({ ...obra, cidade: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
 
           <input
             placeholder="Órgão"
-            value={orgao}
-            onChange={(e) => setOrgao(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.orgao}
+            onChange={(e) =>
+              setObra({ ...obra, orgao: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
 
           <select
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.tipo}
+            onChange={(e) =>
+              setObra({ ...obra, tipo: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           >
             <option>Sinalização</option>
             <option>Pesagem</option>
           </select>
 
           <input
-            placeholder="Valor"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            placeholder="R$ 0,00"
+            value={obra.valor}
+            onChange={(e) =>
+              setObra({
+                ...obra,
+                valor: formatarMoeda(e.target.value),
+              })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
 
           <input
             type="date"
-            value={dataInicio}
-            onChange={(e) => setDataInicio(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.inicio}
+            onChange={(e) =>
+              setObra({ ...obra, inicio: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
 
           <input
             type="date"
-            value={dataFim}
-            onChange={(e) => setDataFim(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
+            value={obra.fim}
+            onChange={(e) =>
+              setObra({ ...obra, fim: e.target.value })
+            }
+            className="p-5 rounded-2xl border border-slate-300 text-lg"
           />
         </div>
 
-        <button
-          onClick={criarObra}
-          className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-semibold"
-        >
+        <button className="mt-8 bg-blue-600 hover:bg-blue-700 text-white px-10 py-5 rounded-2xl text-xl font-semibold transition">
           Salvar obra
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {cards.map((card, index) => {
-          const Icon = card.icon
+      <div className="grid grid-cols-4 gap-6">
+        <Card
+          title="Obras Ativas"
+          value="12"
+          icon={<Building2 size={30} />}
+          color="bg-blue-500"
+        />
 
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-500 text-sm">{card.title}</p>
-                  <h3 className="text-4xl font-bold text-slate-800 mt-2">
-                    {card.value}
-                  </h3>
-                </div>
+        <Card
+          title="Medições"
+          value="28"
+          icon={<ClipboardList size={30} />}
+          color="bg-green-500"
+        />
 
-                <div className={`${card.color} p-4 rounded-2xl text-white`}>
-                  <Icon size={28} />
-                </div>
-              </div>
-            </div>
-          )
-        })}
+        <Card
+          title="Equipamentos"
+          value="47"
+          icon={<Truck size={30} />}
+          color="bg-orange-500"
+        />
+
+        <Card
+          title="Licitações"
+          value="9"
+          icon={<FileText size={30} />}
+          color="bg-purple-500"
+        />
+      </div>
+    </div>
+  )
+}
+
+function Card({
+  title,
+  value,
+  icon,
+  color,
+}: {
+  title: string
+  value: string
+  icon: React.ReactNode
+  color: string
+}) {
+  return (
+    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p className="text-slate-500 text-lg">{title}</p>
+
+        <h3 className="text-5xl font-bold text-slate-800 mt-2">
+          {value}
+        </h3>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 mt-10 shadow-sm border border-slate-200">
-        <h3 className="text-2xl font-bold text-slate-800 mb-6">
-          Obras Recentes
-        </h3>
-
-        <div className="space-y-4">
-          {obras.map((obra) => (
-            <div
-              key={obra.id}
-              className="border border-slate-200 rounded-2xl p-5"
-            >
-              <div className="flex justify-between">
-                <div>
-                  <h4 className="font-bold text-xl text-slate-800">
-                    {obra.nome}
-                  </h4>
-
-                  <p className="text-slate-500">
-                    {obra.cidade} - {obra.estado}
-                  </p>
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Contrato: {obra.contrato}
-                  </p>
-
-                  <p className="text-sm text-slate-500">
-                    Nº Obra: {obra.numero_obra}
-                  </p>
-
-                  <p className="text-sm text-slate-500">
-                    Órgão: {obra.orgao}
-                  </p>
-
-                  <p className="text-sm text-slate-500">
-                    Tipo: {obra.tipo}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold">
-                    {obra.status}
-                  </span>
-
-                  <p className="mt-4 font-bold text-slate-700 text-lg">
-                    R$ {obra.valor}
-                  </p>
-
-                  <p className="text-sm text-slate-400 mt-2">
-                    Início: {obra.data_inicio}
-                  </p>
-
-                  <p className="text-sm text-slate-400">
-                    Fim: {obra.data_fim}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div
+        className={`${color} text-white p-5 rounded-2xl shadow-lg`}
+      >
+        {icon}
       </div>
     </div>
   )
