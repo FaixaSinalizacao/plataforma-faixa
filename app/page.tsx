@@ -41,6 +41,11 @@ const cards = [
 export default function DashboardPage() {
   const [obras, setObras] = useState<any[]>([])
 
+  const [nome, setNome] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [valor, setValor] = useState('')
+  const [responsavel, setResponsavel] = useState('')
+
   async function carregarObras() {
     const { data } = await supabase
       .from('obras')
@@ -50,6 +55,27 @@ export default function DashboardPage() {
     if (data) {
       setObras(data)
     }
+  }
+
+  async function criarObra() {
+    if (!nome) return
+
+    await supabase.from('obras').insert([
+      {
+        nome,
+        cidade,
+        valor,
+        responsavel,
+        status: 'Em andamento',
+      },
+    ])
+
+    setNome('')
+    setCidade('')
+    setValor('')
+    setResponsavel('')
+
+    carregarObras()
   }
 
   useEffect(() => {
@@ -69,10 +95,54 @@ export default function DashboardPage() {
             Visão geral operacional da Plataforma Faixa
           </p>
         </div>
+      </div>
 
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg">
+      {/* FORM */}
+      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 mb-10">
+
+        <h3 className="text-2xl font-bold text-slate-800 mb-6">
           Nova Obra
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+          <input
+            placeholder="Nome da obra"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+          <input
+            placeholder="Cidade"
+            value={cidade}
+            onChange={(e) => setCidade(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+          <input
+            placeholder="Valor"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+          <input
+            placeholder="Responsável"
+            value={responsavel}
+            onChange={(e) => setResponsavel(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+        </div>
+
+        <button
+          onClick={criarObra}
+          className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-semibold"
+        >
+          Salvar obra
         </button>
+
       </div>
 
       {/* CARDS */}
@@ -118,10 +188,6 @@ export default function DashboardPage() {
           <h3 className="text-2xl font-bold text-slate-800">
             Obras Recentes
           </h3>
-
-          <button className="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl">
-            Ver todas
-          </button>
         </div>
 
         <div className="space-y-4">
@@ -133,6 +199,7 @@ export default function DashboardPage() {
               cidade={obra.cidade || 'Sem cidade'}
               status={obra.status}
               valor={`R$ ${obra.valor || 0}`}
+              responsavel={obra.responsavel}
             />
           ))}
 
@@ -149,6 +216,7 @@ function ObraCard({
   cidade,
   status,
   valor,
+  responsavel,
 }: any) {
   return (
     <div className="border border-slate-200 rounded-2xl p-5 hover:shadow-md transition">
@@ -162,6 +230,10 @@ function ObraCard({
 
           <p className="text-slate-500">
             {cidade}
+          </p>
+
+          <p className="text-sm text-slate-400 mt-2">
+            Responsável: {responsavel || 'Não informado'}
           </p>
         </div>
 
