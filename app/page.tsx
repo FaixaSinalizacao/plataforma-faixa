@@ -11,31 +11,17 @@ import {
 
 import { supabase } from '@/lib/supabase'
 
+const estadosBrasil = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
+  'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI',
+  'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+]
+
 const cards = [
-  {
-    title: 'Obras Ativas',
-    value: '12',
-    icon: Building2,
-    color: 'bg-blue-500',
-  },
-  {
-    title: 'Medições',
-    value: '28',
-    icon: ClipboardList,
-    color: 'bg-green-500',
-  },
-  {
-    title: 'Equipamentos',
-    value: '47',
-    icon: Truck,
-    color: 'bg-orange-500',
-  },
-  {
-    title: 'Licitações',
-    value: '9',
-    icon: FileText,
-    color: 'bg-purple-500',
-  },
+  { title: 'Obras Ativas', value: '12', icon: Building2, color: 'bg-blue-500' },
+  { title: 'Medições', value: '28', icon: ClipboardList, color: 'bg-green-500' },
+  { title: 'Equipamentos', value: '47', icon: Truck, color: 'bg-orange-500' },
+  { title: 'Licitações', value: '9', icon: FileText, color: 'bg-purple-500' },
 ]
 
 export default function DashboardPage() {
@@ -44,7 +30,7 @@ export default function DashboardPage() {
   const [contrato, setContrato] = useState('')
   const [numeroObra, setNumeroObra] = useState('')
   const [nome, setNome] = useState('')
-  const [estado, setEstado] = useState('')
+  const [estadosSelecionados, setEstadosSelecionados] = useState<string[]>([])
   const [cidade, setCidade] = useState('')
   const [orgao, setOrgao] = useState('')
   const [tipo, setTipo] = useState('Sinalização')
@@ -58,8 +44,16 @@ export default function DashboardPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (data) {
-      setObras(data)
+    if (data) setObras(data)
+  }
+
+  function alternarEstado(estado: string) {
+    if (estadosSelecionados.includes(estado)) {
+      setEstadosSelecionados(
+        estadosSelecionados.filter((item) => item !== estado)
+      )
+    } else {
+      setEstadosSelecionados([...estadosSelecionados, estado])
     }
   }
 
@@ -69,7 +63,7 @@ export default function DashboardPage() {
         contrato,
         numero_obra: numeroObra,
         nome,
-        estado,
+        estado: estadosSelecionados.join(', '),
         cidade,
         orgao,
         tipo,
@@ -83,7 +77,7 @@ export default function DashboardPage() {
     setContrato('')
     setNumeroObra('')
     setNome('')
-    setEstado('')
+    setEstadosSelecionados([])
     setCidade('')
     setOrgao('')
     setTipo('Sinalização')
@@ -100,28 +94,22 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 p-10">
+      <div className="mb-10">
+        <h2 className="text-4xl font-bold text-slate-800">
+          Dashboard Executivo
+        </h2>
 
-      <div className="flex justify-between items-center mb-10">
-        <div>
-          <h2 className="text-4xl font-bold text-slate-800">
-            Dashboard Executivo
-          </h2>
-
-          <p className="text-slate-500 mt-2">
-            Gestão operacional da Plataforma Faixa
-          </p>
-        </div>
+        <p className="text-slate-500 mt-2">
+          Gestão operacional da Plataforma Faixa
+        </p>
       </div>
 
-      {/* FORM */}
       <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 mb-10">
-
         <h3 className="text-2xl font-bold text-slate-800 mb-6">
           Cadastro de Obra
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-
           <input
             placeholder="Contrato"
             value={contrato}
@@ -143,12 +131,31 @@ export default function DashboardPage() {
             className="p-4 rounded-2xl border border-slate-300"
           />
 
-          <input
-            placeholder="Estado"
-            value={estado}
-            onChange={(e) => setEstado(e.target.value)}
-            className="p-4 rounded-2xl border border-slate-300"
-          />
+          <div className="rounded-2xl border border-slate-300 p-4">
+            <p className="text-sm font-semibold text-slate-700 mb-3">
+              Estado(s)
+            </p>
+
+            <div className="grid grid-cols-4 gap-2 max-h-36 overflow-y-auto">
+              {estadosBrasil.map((estado) => (
+                <label
+                  key={estado}
+                  className="flex items-center gap-2 text-sm text-slate-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={estadosSelecionados.includes(estado)}
+                    onChange={() => alternarEstado(estado)}
+                  />
+                  {estado}
+                </label>
+              ))}
+            </div>
+
+            <p className="text-xs text-slate-500 mt-3">
+              Selecionado: {estadosSelecionados.join(', ') || 'nenhum'}
+            </p>
+          </div>
 
           <input
             placeholder="Cidade"
@@ -193,7 +200,6 @@ export default function DashboardPage() {
             onChange={(e) => setDataFim(e.target.value)}
             className="p-4 rounded-2xl border border-slate-300"
           />
-
         </div>
 
         <button
@@ -202,12 +208,9 @@ export default function DashboardPage() {
         >
           Salvar obra
         </button>
-
       </div>
 
-      {/* CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-
         {cards.map((card, index) => {
           const Icon = card.icon
 
@@ -217,49 +220,35 @@ export default function DashboardPage() {
               className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200"
             >
               <div className="flex items-center justify-between">
-
                 <div>
-                  <p className="text-slate-500 text-sm">
-                    {card.title}
-                  </p>
-
+                  <p className="text-slate-500 text-sm">{card.title}</p>
                   <h3 className="text-4xl font-bold text-slate-800 mt-2">
                     {card.value}
                   </h3>
                 </div>
 
-                <div
-                  className={`${card.color} p-4 rounded-2xl text-white`}
-                >
+                <div className={`${card.color} p-4 rounded-2xl text-white`}>
                   <Icon size={28} />
                 </div>
-
               </div>
             </div>
           )
         })}
-
       </div>
 
-      {/* OBRAS */}
       <div className="bg-white rounded-3xl p-8 mt-10 shadow-sm border border-slate-200">
-
         <h3 className="text-2xl font-bold text-slate-800 mb-6">
           Obras Recentes
         </h3>
 
         <div className="space-y-4">
-
           {obras.map((obra) => (
             <div
               key={obra.id}
               className="border border-slate-200 rounded-2xl p-5"
             >
-
               <div className="flex justify-between">
-
                 <div>
-
                   <h4 className="font-bold text-xl text-slate-800">
                     {obra.nome}
                   </h4>
@@ -283,11 +272,9 @@ export default function DashboardPage() {
                   <p className="text-sm text-slate-500">
                     Tipo: {obra.tipo}
                   </p>
-
                 </div>
 
                 <div className="text-right">
-
                   <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold">
                     {obra.status}
                   </span>
@@ -297,24 +284,18 @@ export default function DashboardPage() {
                   </p>
 
                   <p className="text-sm text-slate-400 mt-2">
-                    {obra.data_inicio}
+                    Início: {obra.data_inicio}
                   </p>
 
                   <p className="text-sm text-slate-400">
-                    {obra.data_fim}
+                    Fim: {obra.data_fim}
                   </p>
-
                 </div>
-
               </div>
-
             </div>
           ))}
-
         </div>
-
       </div>
-
     </div>
   )
 }
