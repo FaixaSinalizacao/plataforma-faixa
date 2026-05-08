@@ -1,9 +1,613 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import {
+  Building2,
+  ClipboardList,
+  ChevronDown,
+  BarChart3,
+  PlusCircle,
+} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+
+const estadosBrasil = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
+  'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
+  'RS','RO','RR','SC','SP','SE','TO'
+]
+
+type ObraForm = {
+  contrato: string
+  numero: string
+  nome: string
+  estados: string[]
+  cidade: string
+  orgao: string
+  tipo: string
+  valor: string
+  inicio: string
+  fim: string
+}
+
 export default function ObrasPage() {
+  const [aba, setAba] = useState('cadastro')
+  const [dropdownAberto, setDropdownAberto] = useState(false)
+  const [obras, setObras] = useState<any[]>([])
+  const [medicoes, setMedicoes] = useState<any[]>([])
+  const [salvando, setSalvando] = useState(false)
+
+  const [obra, setObra] = useState<ObraForm>({
+    contrato: '',
+    numero: '',
+    nome: '',
+    estados: [],
+    cidade: '',
+    orgao: '',
+    tipo: 'Sinalização',
+    valor: '',
+    inicio: '',
+    fim: '',
+  })
+
+  const [novaMedicao, setNovaMedicao] = useState({
+    obra_id: '',
+    numero_medicao: '',
+    valor_executado: '',
+    status: 'Em elaboração',
+    observacoes: '',
+  })
+
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  async function carregarDados() {
+    const { data: obrasData } = await supabase
+      .from('obras')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    const { data: medicoesData } = await supabase
+      .from('medicoes')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (obrasData) setObras(obrasData)
+    if (medicoesData) setMedicoes(medicoesData)
+  }
+
+  useEffect(() => {
+    carregarDados()
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setDropdownAberto(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  function toggleEstado(estado: string) {
+    setObra((prev) => ({
+      ...prev,
+      estados: prev.estados.includes(estado)
+        ? prev.estados.filter((e) => e !== estado)
+        : [...prev.estados, estado],
+    }))
+  }
+
+  function formatarMoeda(valor: string) {
+    const numero = valor.replace(/\D/g, '')
+
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(Number(numero) / 100)
+  }
+
+  function moedaParaNumero(valor: string) {
+    return Number(
+      valor
+        .replace('R$', '')
+        .replace(/\./g, '')
+        .replace(',', '.')
+        .trim()
+    )
+  }
+
+  function moeda(valor: number) {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(Number(valor || 0))
+  }
+
+  async function salvarObra() {
+    if (!obra.nome) {
+      alert('Preencha o nome da obra.')
+      return
+    }
+
+    setSalvando(true)
+
+    const { error } = await supabase.from('obras').insert([
+      {
+        contrato: obra.contrato,
+        numero_obra: obra.numero,
+        nome: obra.nome,
+        estado: obra.estados.join(', '),
+        cidade: obra.cidade,
+        orgao: obra.orgao,
+        tipo: obra.tipo,
+        valor: moedaParaNumero(obra.valor),
+        data_inicio: obra.inicio || null,
+        data_fim: obra.fim || null,
+        status: 'Em andamento',
+      },
+    ])
+
+    setSalvando(false)
+
+    if (error) {
+      alert('Erro ao salvar obra: ' + error.message)
+      return
+    }
+
+    setObra({
+      contrato: '',
+      numero: '',
+      nome: '',
+      estados: [],
+      cidade: '',
+      orgao: '',
+      tipo: 'Sinalização',
+      valor: '',
+      inicio: '',
+      fim: '',
+    })
+
+    await carregarDados()
+    alert('Obra salva com sucesso!')
+  }
+
+  async function salvarMedicao() {
+    if (!novaMedicao.obra_id) {
+      alert('Selecione uma obra.')
+      return
+    }
+
+    const { error } = await supabase.from('medicoes').insert([
+      {
+        obra_id: novaMedicao.obra_id,
+        numero_medicao: novaMedicao.numero_medicao,
+        valor_executado: moedaParaNumero(novaMedicao.valor_executado),
+        status: novaMedicao.status,
+        observacoes: novaMedicao.observacoes,
+      },
+    ])
+
+    if (error) {
+      alert('Erro ao salvar medição: ' + error.message)
+      return
+    }
+
+    setNovaMedicao({
+      obra_id: '',
+      numero_medicao: '',
+      valor_executado: '',
+      status: 'Em elaboração',
+      observacoes: '',
+    })
+
+    await carregarDados()
+    alert('Medição salva com sucesso!')
+  }
+
+  function totalExecutadoPorObra(obraId: string) {
+    return medicoes
+      .filter((medicao) => medicao.obra_id === obraId)
+      .reduce((total, medicao) => total + Number(medicao.valor_executado || 0), 0)
+  }
+
+  function percentualExecutado(obraItem: any) {
+    const total = Number(obraItem.valor || 0)
+    const executado = totalExecutadoPorObra(obraItem.id)
+
+    if (!total) return 0
+
+    return Math.min(Math.round((executado / total) * 100), 100)
+  }
+
   return (
-    <div className="min-h-screen bg-slate-100 p-10">
-      <h1 className="text-4xl font-bold text-slate-800">
-        Gestão de Obras
-      </h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-5xl font-bold text-slate-800">
+          Gestão de Obras
+        </h1>
+
+        <p className="text-slate-500 mt-3 text-lg">
+          Cadastro, acompanhamento de contratos e controle de medições.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-sm flex gap-3">
+        <button
+          onClick={() => setAba('cadastro')}
+          className={`px-6 py-3 rounded-2xl font-semibold flex items-center gap-2 ${
+            aba === 'cadastro'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <PlusCircle size={20} />
+          Cadastro de Obras
+        </button>
+
+        <button
+          onClick={() => setAba('obras')}
+          className={`px-6 py-3 rounded-2xl font-semibold flex items-center gap-2 ${
+            aba === 'obras'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Building2 size={20} />
+          Obras
+        </button>
+
+        <button
+          onClick={() => setAba('medicoes')}
+          className={`px-6 py-3 rounded-2xl font-semibold flex items-center gap-2 ${
+            aba === 'medicoes'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <ClipboardList size={20} />
+          Medições
+        </button>
+      </div>
+
+      {aba === 'cadastro' && (
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
+          <h2 className="text-4xl font-bold mb-8 text-slate-800">
+            Cadastro de Obra
+          </h2>
+
+          <div className="grid grid-cols-3 gap-6">
+            <input
+              placeholder="Contrato"
+              value={obra.contrato}
+              onChange={(e) => setObra({ ...obra, contrato: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+
+            <input
+              placeholder="Número da obra"
+              value={obra.numero}
+              onChange={(e) => setObra({ ...obra, numero: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+
+            <input
+              placeholder="Nome da obra"
+              value={obra.nome}
+              onChange={(e) => setObra({ ...obra, nome: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setDropdownAberto(!dropdownAberto)}
+                className="w-full p-5 rounded-2xl border border-slate-300 bg-white text-left flex items-center justify-between text-lg"
+              >
+                <span>
+                  {obra.estados.length > 0
+                    ? obra.estados.join(', ')
+                    : 'Selecionar estados'}
+                </span>
+
+                <ChevronDown size={22} />
+              </button>
+
+              {dropdownAberto && (
+                <div className="absolute z-50 mt-2 w-full bg-white border border-slate-300 rounded-2xl shadow-xl p-4 max-h-72 overflow-y-auto">
+                  <div className="grid grid-cols-4 gap-3">
+                    {estadosBrasil.map((estado) => (
+                      <label
+                        key={estado}
+                        className="flex items-center gap-2 text-lg"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={obra.estados.includes(estado)}
+                          onChange={() => toggleEstado(estado)}
+                        />
+
+                        {estado}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <input
+              placeholder="Cidade"
+              value={obra.cidade}
+              onChange={(e) => setObra({ ...obra, cidade: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+
+            <input
+              placeholder="Órgão"
+              value={obra.orgao}
+              onChange={(e) => setObra({ ...obra, orgao: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+
+            <select
+              value={obra.tipo}
+              onChange={(e) => setObra({ ...obra, tipo: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            >
+              <option>Sinalização</option>
+              <option>Pesagem</option>
+            </select>
+
+            <input
+              placeholder="R$ 0,00"
+              value={obra.valor}
+              onChange={(e) =>
+                setObra({
+                  ...obra,
+                  valor: formatarMoeda(e.target.value),
+                })
+              }
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+
+            <input
+              type="date"
+              value={obra.inicio}
+              onChange={(e) => setObra({ ...obra, inicio: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+
+            <input
+              type="date"
+              value={obra.fim}
+              onChange={(e) => setObra({ ...obra, fim: e.target.value })}
+              className="p-5 rounded-2xl border border-slate-300 text-lg"
+            />
+          </div>
+
+          <button
+            onClick={salvarObra}
+            disabled={salvando}
+            className="mt-8 bg-blue-600 hover:bg-blue-700 text-white px-10 py-5 rounded-2xl text-xl font-semibold transition disabled:opacity-60"
+          >
+            {salvando ? 'Salvando...' : 'Salvar obra'}
+          </button>
+        </div>
+      )}
+
+      {aba === 'obras' && (
+        <div className="space-y-6">
+          {obras.map((item) => {
+            const executado = totalExecutadoPorObra(item.id)
+            const percentual = percentualExecutado(item)
+
+            return (
+              <div
+                key={item.id}
+                className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm"
+              >
+                <div className="flex justify-between gap-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-800">
+                      {item.nome}
+                    </h2>
+
+                    <p className="text-slate-500 mt-1">
+                      {item.cidade} - {item.estado}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-x-12 gap-y-2 mt-6 text-slate-600">
+                      <p>Contrato: <strong>{item.contrato}</strong></p>
+                      <p>Nº Obra: <strong>{item.numero_obra}</strong></p>
+                      <p>Órgão: <strong>{item.orgao}</strong></p>
+                      <p>Tipo: <strong>{item.tipo}</strong></p>
+                      <p>Início: <strong>{item.data_inicio}</strong></p>
+                      <p>Fim: <strong>{item.data_fim}</strong></p>
+                    </div>
+                  </div>
+
+                  <div className="text-right min-w-72">
+                    <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold">
+                      {item.status}
+                    </span>
+
+                    <p className="text-slate-500 mt-6">
+                      Valor do contrato
+                    </p>
+
+                    <p className="text-3xl font-bold text-slate-800">
+                      {moeda(item.valor)}
+                    </p>
+
+                    <p className="text-slate-500 mt-4">
+                      Valor executado
+                    </p>
+
+                    <p className="text-2xl font-bold text-green-600">
+                      {moeda(executado)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <div className="flex justify-between text-sm text-slate-500 mb-2">
+                    <span>Andamento financeiro do contrato</span>
+                    <span>{percentual}% executado</span>
+                  </div>
+
+                  <div className="w-full bg-slate-200 rounded-full h-5 overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-5 rounded-full transition-all"
+                      style={{ width: `${percentual}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {aba === 'medicoes' && (
+        <div className="space-y-8">
+          <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+            <h2 className="text-4xl font-bold text-slate-800 mb-8">
+              Cadastro de Medição
+            </h2>
+
+            <div className="grid grid-cols-3 gap-6">
+              <select
+                value={novaMedicao.obra_id}
+                onChange={(e) =>
+                  setNovaMedicao({
+                    ...novaMedicao,
+                    obra_id: e.target.value,
+                  })
+                }
+                className="p-5 rounded-2xl border border-slate-300 text-lg"
+              >
+                <option value="">Selecionar obra</option>
+
+                {obras.map((obraItem) => (
+                  <option key={obraItem.id} value={obraItem.id}>
+                    {obraItem.nome}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                placeholder="Número da medição"
+                value={novaMedicao.numero_medicao}
+                onChange={(e) =>
+                  setNovaMedicao({
+                    ...novaMedicao,
+                    numero_medicao: e.target.value,
+                  })
+                }
+                className="p-5 rounded-2xl border border-slate-300 text-lg"
+              />
+
+              <input
+                placeholder="Valor executado"
+                value={novaMedicao.valor_executado}
+                onChange={(e) =>
+                  setNovaMedicao({
+                    ...novaMedicao,
+                    valor_executado: formatarMoeda(e.target.value),
+                  })
+                }
+                className="p-5 rounded-2xl border border-slate-300 text-lg"
+              />
+
+              <select
+                value={novaMedicao.status}
+                onChange={(e) =>
+                  setNovaMedicao({
+                    ...novaMedicao,
+                    status: e.target.value,
+                  })
+                }
+                className="p-5 rounded-2xl border border-slate-300 text-lg"
+              >
+                <option>Em elaboração</option>
+                <option>Executada</option>
+                <option>Aguardando análise</option>
+                <option>Faturada</option>
+              </select>
+
+              <input
+                placeholder="Observações"
+                value={novaMedicao.observacoes}
+                onChange={(e) =>
+                  setNovaMedicao({
+                    ...novaMedicao,
+                    observacoes: e.target.value,
+                  })
+                }
+                className="p-5 rounded-2xl border border-slate-300 text-lg col-span-2"
+              />
+            </div>
+
+            <button
+              onClick={salvarMedicao}
+              className="mt-8 bg-blue-600 hover:bg-blue-700 text-white px-10 py-5 rounded-2xl text-xl font-semibold transition"
+            >
+              Salvar medição
+            </button>
+          </div>
+
+          <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+            <h2 className="text-3xl font-bold text-slate-800 mb-6">
+              Medições Cadastradas
+            </h2>
+
+            <div className="space-y-4">
+              {medicoes.map((medicao) => {
+                const obraDaMedicao = obras.find(
+                  (obraItem) => obraItem.id === medicao.obra_id
+                )
+
+                return (
+                  <div
+                    key={medicao.id}
+                    className="border border-slate-200 rounded-2xl p-5 flex justify-between"
+                  >
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800">
+                        {obraDaMedicao?.nome || 'Obra não encontrada'}
+                      </h3>
+
+                      <p className="text-slate-500">
+                        Medição: {medicao.numero_medicao}
+                      </p>
+
+                      <p className="text-slate-400 text-sm mt-2">
+                        {medicao.observacoes}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold">
+                        {medicao.status}
+                      </span>
+
+                      <p className="mt-4 text-xl font-bold text-slate-800">
+                        {moeda(medicao.valor_executado)}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
