@@ -41,10 +41,16 @@ const cards = [
 export default function DashboardPage() {
   const [obras, setObras] = useState<any[]>([])
 
+  const [contrato, setContrato] = useState('')
+  const [numeroObra, setNumeroObra] = useState('')
   const [nome, setNome] = useState('')
+  const [estado, setEstado] = useState('')
   const [cidade, setCidade] = useState('')
+  const [orgao, setOrgao] = useState('')
+  const [tipo, setTipo] = useState('Sinalização')
   const [valor, setValor] = useState('')
-  const [responsavel, setResponsavel] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
 
   async function carregarObras() {
     const { data } = await supabase
@@ -58,22 +64,32 @@ export default function DashboardPage() {
   }
 
   async function criarObra() {
-    if (!nome) return
-
     await supabase.from('obras').insert([
       {
+        contrato,
+        numero_obra: numeroObra,
         nome,
+        estado,
         cidade,
+        orgao,
+        tipo,
         valor,
-        responsavel,
+        data_inicio: dataInicio,
+        data_fim: dataFim,
         status: 'Em andamento',
       },
     ])
 
+    setContrato('')
+    setNumeroObra('')
     setNome('')
+    setEstado('')
     setCidade('')
+    setOrgao('')
+    setTipo('Sinalização')
     setValor('')
-    setResponsavel('')
+    setDataInicio('')
+    setDataFim('')
 
     carregarObras()
   }
@@ -92,7 +108,7 @@ export default function DashboardPage() {
           </h2>
 
           <p className="text-slate-500 mt-2">
-            Visão geral operacional da Plataforma Faixa
+            Gestão operacional da Plataforma Faixa
           </p>
         </div>
       </div>
@@ -101,15 +117,36 @@ export default function DashboardPage() {
       <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 mb-10">
 
         <h3 className="text-2xl font-bold text-slate-800 mb-6">
-          Nova Obra
+          Cadastro de Obra
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+
+          <input
+            placeholder="Contrato"
+            value={contrato}
+            onChange={(e) => setContrato(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+          <input
+            placeholder="Número da obra"
+            value={numeroObra}
+            onChange={(e) => setNumeroObra(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
 
           <input
             placeholder="Nome da obra"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+          <input
+            placeholder="Estado"
+            value={estado}
+            onChange={(e) => setEstado(e.target.value)}
             className="p-4 rounded-2xl border border-slate-300"
           />
 
@@ -121,6 +158,22 @@ export default function DashboardPage() {
           />
 
           <input
+            placeholder="Órgão"
+            value={orgao}
+            onChange={(e) => setOrgao(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          >
+            <option>Sinalização</option>
+            <option>Pesagem</option>
+          </select>
+
+          <input
             placeholder="Valor"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
@@ -128,9 +181,16 @@ export default function DashboardPage() {
           />
 
           <input
-            placeholder="Responsável"
-            value={responsavel}
-            onChange={(e) => setResponsavel(e.target.value)}
+            type="date"
+            value={dataInicio}
+            onChange={(e) => setDataInicio(e.target.value)}
+            className="p-4 rounded-2xl border border-slate-300"
+          />
+
+          <input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
             className="p-4 rounded-2xl border border-slate-300"
           />
 
@@ -184,68 +244,72 @@ export default function DashboardPage() {
       {/* OBRAS */}
       <div className="bg-white rounded-3xl p-8 mt-10 shadow-sm border border-slate-200">
 
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold text-slate-800">
-            Obras Recentes
-          </h3>
-        </div>
+        <h3 className="text-2xl font-bold text-slate-800 mb-6">
+          Obras Recentes
+        </h3>
 
         <div className="space-y-4">
 
           {obras.map((obra) => (
-            <ObraCard
+            <div
               key={obra.id}
-              obra={obra.nome}
-              cidade={obra.cidade || 'Sem cidade'}
-              status={obra.status}
-              valor={`R$ ${obra.valor || 0}`}
-              responsavel={obra.responsavel}
-            />
+              className="border border-slate-200 rounded-2xl p-5"
+            >
+
+              <div className="flex justify-between">
+
+                <div>
+
+                  <h4 className="font-bold text-xl text-slate-800">
+                    {obra.nome}
+                  </h4>
+
+                  <p className="text-slate-500">
+                    {obra.cidade} - {obra.estado}
+                  </p>
+
+                  <p className="mt-2 text-sm text-slate-500">
+                    Contrato: {obra.contrato}
+                  </p>
+
+                  <p className="text-sm text-slate-500">
+                    Nº Obra: {obra.numero_obra}
+                  </p>
+
+                  <p className="text-sm text-slate-500">
+                    Órgão: {obra.orgao}
+                  </p>
+
+                  <p className="text-sm text-slate-500">
+                    Tipo: {obra.tipo}
+                  </p>
+
+                </div>
+
+                <div className="text-right">
+
+                  <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold">
+                    {obra.status}
+                  </span>
+
+                  <p className="mt-4 font-bold text-slate-700 text-lg">
+                    R$ {obra.valor}
+                  </p>
+
+                  <p className="text-sm text-slate-400 mt-2">
+                    {obra.data_inicio}
+                  </p>
+
+                  <p className="text-sm text-slate-400">
+                    {obra.data_fim}
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
           ))}
-
-        </div>
-
-      </div>
-
-    </div>
-  )
-}
-
-function ObraCard({
-  obra,
-  cidade,
-  status,
-  valor,
-  responsavel,
-}: any) {
-  return (
-    <div className="border border-slate-200 rounded-2xl p-5 hover:shadow-md transition">
-
-      <div className="flex justify-between items-center">
-
-        <div>
-          <h4 className="font-bold text-lg text-slate-800">
-            {obra}
-          </h4>
-
-          <p className="text-slate-500">
-            {cidade}
-          </p>
-
-          <p className="text-sm text-slate-400 mt-2">
-            Responsável: {responsavel || 'Não informado'}
-          </p>
-        </div>
-
-        <div className="text-right">
-
-          <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-semibold">
-            {status}
-          </span>
-
-          <p className="mt-3 font-bold text-slate-700">
-            {valor}
-          </p>
 
         </div>
 
